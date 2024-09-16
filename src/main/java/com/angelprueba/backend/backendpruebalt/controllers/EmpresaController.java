@@ -4,10 +4,13 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -29,13 +32,26 @@ import jakarta.validation.Valid;
 @CrossOrigin(originPatterns = "*")
 public class EmpresaController {
 
-
     @Autowired
     private EmpresaService empresaService;
 
     @GetMapping
-    public List<Empresa> getAllEmpresas() {
-        return empresaService.getAllEmpresas();
+    public ResponseEntity<?> getAllEmpresas(Authentication authentication) {
+        // Obtener los roles del usuario autenticado
+        List<String> roles = authentication.getAuthorities()
+                                           .stream()
+                                           .map(GrantedAuthority::getAuthority)
+                                           .collect(Collectors.toList());
+
+        // Obtener la lista de empresas
+        List<Empresa> empresas = empresaService.getAllEmpresas();
+
+        // Crear un mapa para enviar ambas cosas: empresas y roles
+        Map<String, Object> response = new HashMap<>();
+        response.put("empresas", empresas);
+        response.put("roles", roles);
+
+        return ResponseEntity.ok(response);
     }
 
     @PostMapping
@@ -61,7 +77,6 @@ public class EmpresaController {
         return ResponseEntity.notFound().build();
     }
 
-
     private ResponseEntity<?> validation(BindingResult result) {
         Map<String, String> errors = new HashMap<>();
 
@@ -70,6 +85,4 @@ public class EmpresaController {
         });
         return ResponseEntity.badRequest().body(errors);
     }
-
-
 }
